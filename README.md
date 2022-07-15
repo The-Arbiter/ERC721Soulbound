@@ -1,6 +1,6 @@
 # ERC721Soulbound
 
-*Disclaimer: the error selector for TokenIsSoulbound is glitching out on me - the code should work as written.*
+*Thanks to Andreas Bigger for fixing the error issues and porting it across to Solmate.*
 
 ### *Why does SBT need a new token standard?*
 
