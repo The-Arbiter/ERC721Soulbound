@@ -1,54 +1,31 @@
 // SPDX-License-Identifier: MIT
-/// @author 0xArbiter
-
 pragma solidity ^0.8.15;
 
-import "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import "openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import {ERC721} from "solmate/tokens/ERC721.sol";
 
-/**
- * @title ERC721 Soulbound Token
- * @dev ERC721 Token that can be burned and minted but not transferred.
- */
-contract Soulbound is ERC721, ERC721Burnable {
+/// @title ERC721 Soulbound Token
+/// @author 0xArbiter
+/// @author Andreas Bigger <https://github.com/abigger87>
+/// @dev ERC721 Token that can be burned and minted but not transferred.
+abstract contract Soulbound is ERC721 {
 
     // Custom SBT error for if users try to transfer
     error TokenIsSoulbound();
 
     /// @dev Put your NFT's name and symbol here
-    constructor() ERC721("Soulbound Token", "SBT"){}
+    constructor(string memory name, string memory symbol) ERC721(name, symbol){}
 
-    /// TokenId counter for minting
-    uint256 public tokenId = 0;
-
-    /// @dev Mint function for testing
-    function safeMint(address to) public payable {
-        _safeMint(to, tokenId);
-        ++tokenId;
-    } 
-
-    /**
-     * @dev Enforces that tokens cannot be sent in a manner consistent with the 'Soulbound' spec.
-     *
-     * Requirements:
-     *
-     * - The `from` address must be the 0 address
-     * OR
-     * - The `to` address must be the 0 address
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId 
-    ) internal pure override {
-
+    /// @notice Prevent Non-soulbound transfers
+    function onlySoulbound(address from, address to) internal pure {
         // Revert if transfers are not from the 0 address and not to the 0 address
-        // Using `from == address(0) || to == address(0)`
-        if(from == address(0) || to == address(0)){
+        if (from != address(0) && to != address(0)) {
             revert TokenIsSoulbound();
         }
-
-        return;
     }
 
+    /// @notice Override token transfers to prevent sending tokens
+    function transferFrom(address from, address to, uint256 id) public override {
+        onlySoulbound(from, to);
+        super.transferFrom(from, to, id);
+    }
 }
