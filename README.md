@@ -1,5 +1,7 @@
 # ERC721Soulbound
 
+*Disclaimer: the error selector for TokenIsSoulbound is glitching out on me - the code should work as written.*
+
 ### *Why does SBT need a new token standard?*
 
 Watch me negate the need for a new Soulbound token spec using 2 functions.
@@ -43,4 +45,7 @@ In the meantime this repo serves as a basis for implementing SBTs which doesn't 
 
 *If you're a SBT project that has been waiting for the token spec to be finalised so you can go to market, you don't have to wait anymore.*
 
+### Footnotes
 
+- beforeTokenTransfer is the best place to do our checks as _burn in the OZ contract uses this
+- You could map tokenIds to bool to have semi-soulbound tokens where tokens are soulbound until they are 'unlocked' on a per-token basis
