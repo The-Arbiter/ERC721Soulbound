@@ -43,7 +43,8 @@ contract Soulbound is ERC721, ERC721Burnable {
     ) internal pure override {
 
         // Revert if transfers are not from the 0 address and not to the 0 address
-        if(from != address(0) && to != address(0)){
+        // Using `from == address(0) || to == address(0)`
+        if(from == address(0) || to == address(0)){
             revert TokenIsSoulbound();
         }
 
