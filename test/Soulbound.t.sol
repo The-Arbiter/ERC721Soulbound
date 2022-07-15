@@ -4,27 +4,19 @@
 pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
-import "../src/Soulbound.sol";
+import {SBT} from "./mocks/SBT.sol";
+import {ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 
-contract SoulboundTest is Test,IERC721Receiver {
-
-    Soulbound soulbound;
+contract SoulboundTest is Test, ERC721TokenReceiver {
+    SBT soulbound;
 
     function setUp() public {
-        soulbound = new Soulbound();
+        soulbound = new SBT();
     }
 
-    // Token ID for tests has to be monitored
-    uint256 tokenId;
-
     // Allow the contract to receive ERC721 for testing
-    function onERC721Received(
-        address operator, 
-        address from, 
-        uint256 tokenId, 
-        bytes calldata data
-    ) public pure override returns (bytes4){
-        return IERC721Receiver.onERC721Received.selector;
+    function onERC721Received(address, address, uint256, bytes calldata) public pure override returns (bytes4){
+        return ERC721TokenReceiver.onERC721Received.selector;
     }
 
     function fuzzingRestrictions(address someAddress) internal{
@@ -34,41 +26,33 @@ contract SoulboundTest is Test,IERC721Receiver {
     }
 
     // Test that tokens can be minted
-    function test_mint_tokens(address tokenOwner_ ) public{
-        
+    function testMintTokens(address tokenOwner_ ) public{
         fuzzingRestrictions(tokenOwner_);
 
         // Check old balance
-        uint256 existingBalance = soulbound.balanceOf(address(tokenOwner_));
-        // Mint a token
-        soulbound.safeMint{value:0} (address(tokenOwner_));
-        // Check new balance
-        uint256 newBalance = soulbound.balanceOf(address(tokenOwner_));
+        uint256 existingBalance = soulbound.balanceOf(tokenOwner_);
+        soulbound.safeMint{value:0}(tokenOwner_);
+        uint256 newBalance = soulbound.balanceOf(tokenOwner_);
 
         // Check that our token balance increased by 1
         if(newBalance - existingBalance != 1){
             revert("No tokens were sent to the test contract.");
         }
-
-        
-
     }
 
     // Test that tokens can be burnt
-    function test_burn_tokens(address tokenOwner_ ) public{
-        
+    function testBurnTokens(address tokenOwner_ ) public{
         // Mint tokens using the above test
-        this.test_mint_tokens(tokenOwner_);
-        
+        this.testMintTokens(tokenOwner_);
+
         // Check old balance
-        uint256 existingBalance = soulbound.balanceOf(address(tokenOwner_));
+        uint256 existingBalance = soulbound.balanceOf(tokenOwner_);
 
-        vm.startPrank(tokenOwner_);
-        // Burn the token
-        soulbound.burn(soulbound.tokenId() - 1);
-
-        // Check new balance
-        uint256 newBalance = soulbound.balanceOf(address(tokenOwner_));
+        // Burn the tokens
+        uint256 token_id = soulbound.totalSupply() - 1;
+        vm.prank(tokenOwner_);
+        soulbound.burn(token_id);
+        uint256 newBalance = soulbound.balanceOf(tokenOwner_);
 
         // Check that our token balance decreased by 1
         if(existingBalance - newBalance != 1){
@@ -77,26 +61,23 @@ contract SoulboundTest is Test,IERC721Receiver {
     }
 
     // Test that tokens cannot be sent and thus are soulbound
-    function test_cannot_send_soulbound_tokens(address tokenOwner_ , address tokenRecipient_) public{
-        
+    function testCannotSendSoulboundTokens(address tokenOwner_ , address tokenRecipient_) public{
         fuzzingRestrictions(tokenRecipient_);
-
         vm.assume(tokenOwner_ != tokenRecipient_);
 
         // Mint tokens using the above test
-        this.test_mint_tokens(tokenOwner_);
-        
-        vm.startPrank(tokenOwner_);
+        this.testMintTokens(tokenOwner_);
+
         // Try to send a token
-        soulbound.approve(address(tokenRecipient_), soulbound.tokenId() - 1);
+        vm.startPrank(tokenOwner_);
+        uint256 new_id = soulbound.totalSupply() - 1;
+        soulbound.approve(address(tokenRecipient_), new_id);
 
         // Expect revert with `TokenIsSoulbound()` error type
+        vm.expectRevert(abi.encodeWithSignature("TokenIsSoulbound()"));
+        soulbound.safeTransferFrom(tokenOwner_, tokenRecipient_, new_id);
 
-        vm.expectRevert(Soulbound.TokenIsSoulbound.selector);
-
-        soulbound.safeTransferFrom(address(tokenOwner_),address(tokenRecipient_), soulbound.tokenId() - 1);
-
-
+        vm.stopPrank();
     }
 
 }
